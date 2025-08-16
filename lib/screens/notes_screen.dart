@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/note_model.dart';
 import '../services/note_service.dart';
-import '../services/pro_service.dart';
 // ...existing code...
-import '../services/trial_service.dart';
-import 'paywall_screen.dart';
 
 class NotesScreen extends StatefulWidget {
   const NotesScreen({super.key});
@@ -18,6 +15,14 @@ class _NotesScreenState extends State<NotesScreen> with SingleTickerProviderStat
   final TextEditingController _contentController = TextEditingController();
   List<Note> _notes = [];
   late AnimationController _animController;
+  final List<Color> _noteColors = [
+    Colors.yellow.shade100,
+    Colors.green.shade100,
+    Colors.blue.shade100,
+    Colors.pink.shade100,
+    Colors.orange.shade100,
+    Colors.purple.shade100,
+  ];
 
   @override
   void initState() {
@@ -27,9 +32,7 @@ class _NotesScreenState extends State<NotesScreen> with SingleTickerProviderStat
       vsync: this,
       duration: const Duration(milliseconds: 500),
     );
-    _animController.forward();
-    // Start trial if needed
-    Future.microtask(() => TrialService.startTrialIfNeeded());
+  _animController.forward();
   }
 
   @override
@@ -58,23 +61,7 @@ class _NotesScreenState extends State<NotesScreen> with SingleTickerProviderStat
     final title = _titleController.text.trim();
     final content = _contentController.text.trim();
     if (title.isNotEmpty && content.isNotEmpty) {
-      // Limit free users to 5 notes
-      final isPremium = await ProService.isPremium();
-      if (!isPremium && _notes.length >= 5) {
-        final unlocked = await Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const PaywallScreen()),
-        );
-        if (unlocked == true) {
-          ProService.unlockPro();
-        } else {
-          return;
-        }
-      }
-      // Increment trial action if not Pro
-      if (!ProService.isPro) {
-        await TrialService.incrementAction();
-      }
+  // ...existing code...
       final note = Note(
         title: title,
         content: content,
@@ -158,11 +145,18 @@ class _NotesScreenState extends State<NotesScreen> with SingleTickerProviderStat
       body: AnimatedBuilder(
         animation: _animController,
         builder: (context, child) {
-          return ListView.builder(
+          return GridView.builder(
             padding: const EdgeInsets.all(16),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 16,
+              crossAxisSpacing: 16,
+              childAspectRatio: 0.9,
+            ),
             itemCount: _notes.length,
             itemBuilder: (context, index) {
               final note = _notes[index];
+              final color = _noteColors[index % _noteColors.length];
               final animation = Tween<double>(begin: 0, end: 1).animate(
                 CurvedAnimation(
                   parent: _animController,
@@ -176,17 +170,99 @@ class _NotesScreenState extends State<NotesScreen> with SingleTickerProviderStat
                     begin: const Offset(0, 0.1),
                     end: Offset.zero,
                   ).animate(animation),
-                  child: Card(
-                    elevation: 2,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    child: ListTile(
-                      title: Text(note.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Text(note.content),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete_outline),
-                        onPressed: () => _deleteNote(note),
-                        tooltip: 'Delete',
+                  child: GestureDetector(
+                    onTap: () {
+                      _titleController.text = note.title;
+                      _contentController.text = note.content;
+                      showModalBottomSheet(
+                        context: context,
+                        showDragHandle: true,
+                        isScrollControlled: true,
+                        builder: (context) => Padding(
+                          padding: EdgeInsets.only(
+                            left: 16, right: 16,
+                            bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+                            top: 16,
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              TextField(
+                                controller: _titleController,
+                                decoration: const InputDecoration(labelText: 'Title'),
+                                autofocus: true,
+                              ),
+                              TextField(
+                                controller: _contentController,
+                                decoration: const InputDecoration(labelText: 'Content'),
+                                minLines: 2,
+                                maxLines: 5,
+                              ),
+                              const SizedBox(height: 12),
+                              ElevatedButton.icon(
+                                icon: const Icon(Icons.save),
+                                label: const Text('Save'),
+                                onPressed: () async {
+                                  final title = _titleController.text.trim();
+                                  final content = _contentController.text.trim();
+                                  if (title.isNotEmpty && content.isNotEmpty) {
+                                    final updated = Note(
+                                      title: title,
+                                      content: content,
+                                      createdAt: note.createdAt,
+                                    );
+                                    NoteService.updateNote(index, updated);
+                                    _loadNotes();
+                                    Navigator.pop(context);
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Theme.of(context).colorScheme.primary,
+                                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                                  minimumSize: const Size.fromHeight(48),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                              ),
+                              ElevatedButton.icon(
+                                icon: const Icon(Icons.delete_outline),
+                                label: const Text('Delete'),
+                                onPressed: () {
+                                  _deleteNote(note);
+                                  Navigator.pop(context);
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.redAccent,
+                                  foregroundColor: Colors.white,
+                                  minimumSize: const Size.fromHeight(48),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                    child: Card(
+                      color: color,
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(note.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            const SizedBox(height: 8),
+                            Expanded(
+                              child: Text(
+                                note.content,
+                                style: const TextStyle(fontSize: 14),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 6,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),

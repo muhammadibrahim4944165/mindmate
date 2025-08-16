@@ -8,7 +8,7 @@ import 'screens/notes_screen.dart';
 import 'screens/tasks_screen.dart';
 import 'screens/meetings_screen.dart';
 import 'screens/habits_screen.dart';
-import 'screens/calendar_screen.dart';
+import 'screens/device_calendar_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,7 +30,7 @@ class MyApp extends StatelessWidget {
         '/tasks': (context) => TasksScreen(),
         '/meetings': (context) => MeetingsScreen(),
         '/habits': (context) => HabitsScreen(),
-        '/calendar': (context) => CalendarScreen(),
+        '/device_calendar': (context) => DeviceCalendarScreen(),
         // Add more routes as needed
       },
     );

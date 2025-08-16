@@ -21,7 +21,7 @@ class HiveService {
     await Hive.openBox<Habit>('habits');
     await Hive.openBox<Event>('events');
     await Hive.openBox<SyncedEvent>('synced_events');
-    await Hive.openBox('trial_info');
+  // ...existing code...
   }
 
   static Box<Note> get notesBox => Hive.box<Note>('notes');

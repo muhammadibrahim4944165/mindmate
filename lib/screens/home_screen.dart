@@ -32,10 +32,10 @@ class HomeScreen extends StatelessWidget {
         route: '/habits',
       ),
       _HomeCardData(
-        icon: Icons.calendar_today,
-        label: 'Calendar',
+        icon: Icons.event,
+        label: 'Device Calendar',
         color: Colors.teal,
-        route: '/calendar',
+        route: '/device_calendar',
       ),
     ];
 

@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/task_model.dart';
-import '../widgets/mindmate_card.dart';
-import '../services/pro_service.dart';
-import '../services/trial_service.dart';
-import 'paywall_screen.dart';
+// ...existing code...
+// ...existing code...
 
 class TasksScreen extends StatefulWidget {
   const TasksScreen({super.key});
@@ -26,10 +24,8 @@ class _TasksScreenState extends State<TasksScreen> with SingleTickerProviderStat
       vsync: this,
       duration: const Duration(milliseconds: 500),
     );
-    _addDemoTaskIfEmpty();
-    _animController.forward();
-    // Start trial if needed
-    Future.microtask(() => TrialService.startTrialIfNeeded());
+  _addDemoTaskIfEmpty();
+  _animController.forward();
   }
 
   void _addDemoTaskIfEmpty() {
@@ -44,37 +40,7 @@ class _TasksScreenState extends State<TasksScreen> with SingleTickerProviderStat
 
   Future<void> _addTask(String title) async {
     if (title.trim().isEmpty) return;
-    // Check if user is Pro or trial is active
-    final isPremium = await ProService.isPremium();
-    if (!isPremium) {
-      // If trial is over, block and show paywall
-      final trialActive = await TrialService.isTrialActive();
-      if (!trialActive) {
-        final unlocked = await Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const PaywallScreen()),
-        );
-        if (unlocked == true) {
-          ProService.unlockPro();
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Trial ended. Please subscribe to continue.')),
-          );
-          return;
-        }
-      }
-    }
-    // Limit free/trial users to 10 tasks
-    if (!ProService.isPro && _taskBox.length >= 10) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Task limit reached. Upgrade to Pro for unlimited tasks.')),
-      );
-      return;
-    }
-    // Increment trial action if not Pro
-    if (!ProService.isPro) {
-      await TrialService.incrementAction();
-    }
+  // ...existing code...
     final task = Task(
       title: title,
       isDone: false,
@@ -167,47 +133,99 @@ class _TasksScreenState extends State<TasksScreen> with SingleTickerProviderStat
           if (box.isEmpty) {
             return const Center(child: Text('No tasks yet.'));
           }
-          return ListView.builder(
+          return ReorderableListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: box.length,
             itemBuilder: (context, index) {
               final task = box.getAt(index)!;
-              final animation = Tween<double>(begin: 0, end: 1).animate(
-                CurvedAnimation(
-                  parent: _animController,
-                  curve: Interval(index / box.length, 1, curve: Curves.easeOut),
-                ),
-              );
-              return FadeTransition(
-                opacity: animation,
-                child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0, 0.1),
-                    end: Offset.zero,
-                  ).animate(animation),
-                  child: MindMateCard(
-                    child: ListTile(
-                      leading: Checkbox(
-                        value: task.isDone,
-                        onChanged: (_) => _toggleTask(task),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                      ),
-                      title: Text(
-                        task.title,
-                        style: TextStyle(
-                          decoration: task.isDone ? TextDecoration.lineThrough : null,
-                          color: task.isDone ? colorScheme.outline : colorScheme.onSurface,
+              return Dismissible(
+                key: ValueKey(task.key),
+                background: Container(color: Colors.redAccent),
+                onDismissed: (_) => _deleteTask(index),
+                child: ListTile(
+                  leading: Checkbox(
+                    value: task.isDone,
+                    onChanged: (_) => _toggleTask(task),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                  ),
+                  title: GestureDetector(
+                    onTap: () {
+                      _controller.text = task.title;
+                      showModalBottomSheet(
+                        context: context,
+                        showDragHandle: true,
+                        isScrollControlled: true,
+                        builder: (context) => Padding(
+                          padding: EdgeInsets.only(
+                            left: 16, right: 16,
+                            bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+                            top: 16,
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              TextField(
+                                controller: _controller,
+                                decoration: const InputDecoration(labelText: 'Task'),
+                                autofocus: true,
+                              ),
+                              const SizedBox(height: 12),
+                              ElevatedButton.icon(
+                                icon: const Icon(Icons.save),
+                                label: const Text('Save'),
+                                onPressed: () async {
+                                  final title = _controller.text.trim();
+                                  if (title.isNotEmpty) {
+                                    task.title = title;
+                                    task.save();
+                                    setState(() {});
+                                    Navigator.pop(context);
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Theme.of(context).colorScheme.primary,
+                                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                                  minimumSize: const Size.fromHeight(48),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                              ),
+                              ElevatedButton.icon(
+                                icon: const Icon(Icons.delete_outline),
+                                label: const Text('Delete'),
+                                onPressed: () {
+                                  _deleteTask(index);
+                                  Navigator.pop(context);
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.redAccent,
+                                  foregroundColor: Colors.white,
+                                  minimumSize: const Size.fromHeight(48),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete_outline),
-                        onPressed: () => _deleteTask(index),
-                        tooltip: 'Delete',
+                      );
+                    },
+                    child: Text(
+                      task.title,
+                      style: TextStyle(
+                        decoration: task.isDone ? TextDecoration.lineThrough : null,
+                        color: task.isDone ? colorScheme.outline : colorScheme.onSurface,
                       ),
                     ),
                   ),
+                  trailing: const Icon(Icons.drag_handle),
                 ),
               );
+            },
+            onReorder: (oldIndex, newIndex) {
+              if (newIndex > oldIndex) newIndex--;
+              final task = box.getAt(oldIndex);
+              box.deleteAt(oldIndex);
+              box.putAt(newIndex, task!);
+              setState(() {});
             },
           );
         },

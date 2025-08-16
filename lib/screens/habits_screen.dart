@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/habit_model.dart';
 // ...existing code...
-// ...existing code...
 
 class HabitsScreen extends StatefulWidget {
   const HabitsScreen({super.key});
@@ -11,6 +10,14 @@ class HabitsScreen extends StatefulWidget {
 }
 
 class _HabitsScreenState extends State<HabitsScreen> with SingleTickerProviderStateMixin {
+  final List<Color> _habitColors = [
+    Colors.green.shade100,
+    Colors.blue.shade100,
+    Colors.pink.shade100,
+    Colors.orange.shade100,
+    Colors.purple.shade100,
+    Colors.yellow.shade100,
+  ];
 
   Future<void> _addHabit(String title) async {
     if (title.trim().isEmpty) return;
@@ -123,6 +130,13 @@ class _HabitsScreenState extends State<HabitsScreen> with SingleTickerProviderSt
     return Scaffold(
       appBar: AppBar(
         title: const Text('Habits'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add),
+            tooltip: 'Add Habit',
+            onPressed: _showAddHabitSheet,
+          ),
+        ],
       ),
       body: ValueListenableBuilder(
         valueListenable: _habitBox.listenable(),
@@ -130,11 +144,18 @@ class _HabitsScreenState extends State<HabitsScreen> with SingleTickerProviderSt
           if (box.isEmpty) {
             return const Center(child: Text('No habits yet!'));
           }
-          return ListView.builder(
+          return GridView.builder(
             padding: const EdgeInsets.all(16),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 16,
+              crossAxisSpacing: 16,
+              childAspectRatio: 1.1,
+            ),
             itemCount: box.length,
             itemBuilder: (context, index) {
               final habit = box.getAt(index)!;
+              final color = _habitColors[index % _habitColors.length];
               final animation = Tween<double>(begin: 0, end: 1).animate(
                 CurvedAnimation(
                   parent: _animController,
@@ -148,30 +169,100 @@ class _HabitsScreenState extends State<HabitsScreen> with SingleTickerProviderSt
                     begin: const Offset(0, 0.1),
                     end: Offset.zero,
                   ).animate(animation),
-                  child: Card(
-                    elevation: 2,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    child: ListTile(
-                      leading: Checkbox(
-                        value: _isCompletedToday(habit),
-                        onChanged: (_) => _toggleCompletion(habit, index),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                      ),
-                      title: Text(
-                        habit.title,
-                        style: TextStyle(
-                          decoration: _isCompletedToday(habit) ? TextDecoration.lineThrough : null,
-                          color: _isCompletedToday(habit) ? colorScheme.outline : colorScheme.onSurface,
+                  child: GestureDetector(
+                    onTap: () {
+                      _habitController.text = habit.title;
+                      showModalBottomSheet(
+                        context: context,
+                        showDragHandle: true,
+                        isScrollControlled: true,
+                        builder: (context) => Padding(
+                          padding: EdgeInsets.only(
+                            left: 16, right: 16,
+                            bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+                            top: 16,
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              TextField(
+                                controller: _habitController,
+                                decoration: const InputDecoration(labelText: 'Habit'),
+                                autofocus: true,
+                              ),
+                              const SizedBox(height: 12),
+                              ElevatedButton.icon(
+                                icon: const Icon(Icons.save),
+                                label: const Text('Save'),
+                                onPressed: () async {
+                                  final title = _habitController.text.trim();
+                                  if (title.isNotEmpty) {
+                                    habit.title = title;
+                                    habit.save();
+                                    setState(() {});
+                                    Navigator.pop(context);
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Theme.of(context).colorScheme.primary,
+                                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                                  minimumSize: const Size.fromHeight(48),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                              ),
+                              ElevatedButton.icon(
+                                icon: const Icon(Icons.delete_outline),
+                                label: const Text('Delete'),
+                                onPressed: () {
+                                  _deleteHabit(index);
+                                  Navigator.pop(context);
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.redAccent,
+                                  foregroundColor: Colors.white,
+                                  minimumSize: const Size.fromHeight(48),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      subtitle: habit.streak > 0
-                          ? Text('🔥 Streak: ${habit.streak} day${habit.streak == 1 ? '' : 's'}', style: const TextStyle(color: Colors.orange))
-                          : null,
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete_outline),
-                        onPressed: () => _deleteHabit(index),
-                        tooltip: 'Delete',
+                      );
+                    },
+                    child: Card(
+                      color: color,
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Checkbox(
+                                  value: _isCompletedToday(habit),
+                                  onChanged: (_) => _toggleCompletion(habit, index),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    habit.title,
+                                    style: TextStyle(
+                                      decoration: _isCompletedToday(habit) ? TextDecoration.lineThrough : null,
+                                      color: _isCompletedToday(habit) ? colorScheme.outline : colorScheme.onSurface,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            if (habit.streak > 0)
+                              Text('🔥 Streak: ${habit.streak} day${habit.streak == 1 ? '' : 's'}', style: const TextStyle(color: Colors.orange)),
+                          ],
+                        ),
                       ),
                     ),
                   ),

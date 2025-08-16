@@ -5,9 +5,8 @@ import 'package:flutter_sound/flutter_sound.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
-import '../services/pro_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 // ...existing code...
-import 'paywall_screen.dart';
 
 class MeetingsScreen extends StatefulWidget {
   const MeetingsScreen({super.key});
@@ -72,18 +71,7 @@ class _MeetingsScreenState extends State<MeetingsScreen> with SingleTickerProvid
 
   Future<void> _saveMeeting(String title) async {
     if (_recordedPath == null || title.trim().isEmpty) return;
-    // Limit free users to 3 meetings
-    if (!ProService.isPro && _meetingBox.length >= 3) {
-      final unlocked = await Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const PaywallScreen()),
-      );
-      if (unlocked == true) {
-        ProService.unlockPro();
-      } else {
-        return;
-      }
-    }
+  // ...existing code...
     final meeting = Meeting(
       title: title,
       audioPath: _recordedPath!,
@@ -188,6 +176,20 @@ class _MeetingsScreenState extends State<MeetingsScreen> with SingleTickerProvid
             icon: const Icon(Icons.mic),
             tooltip: 'Record Meeting',
             onPressed: _showAddMeetingSheet,
+          ),
+          IconButton(
+            icon: const Icon(Icons.video_call),
+            tooltip: 'Join Zoom Meeting',
+            onPressed: () async {
+              const zoomUrl = 'zoommtg://zoom.us/join?action=join';
+              if (await canLaunchUrl(Uri.parse(zoomUrl))) {
+                await launchUrl(Uri.parse(zoomUrl));
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Zoom app not found.')),
+                );
+              }
+            },
           ),
         ],
       ),
