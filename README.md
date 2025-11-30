@@ -13,8 +13,15 @@ Mindmate is a modern productivity and wellness app built with Flutter. It helps 
 - **No Premium Restrictions**: All features are fully available—no paywalls, no subscriptions.
 
 ## Screenshots
+![IMG-20251130-WA0030](https://github.com/user-attachments/assets/5a7689b9-7a19-4929-9c58-130f04753721)
+![IMG-20251130-WA0033](https://github.com/user-attachments/assets/3511bdbd-f8f2-4667-89bb-dcd75336a0d4)
+![IMG-20251130-WA0034](https://github.com/user-attachments/assets/e9c45aa5-6a59-4184-8713-87b9cebc4a80)
+![IMG-20251130-WA0035](https://github.com/user-attachments/assets/fb6d0469-2ad8-46a6-b41c-6079d7769f22)
+![IMG-20251130-WA0036](https://github.com/user-attachments/assets/d3bc5dd0-f007-4cf6-8573-6f017f041506)
+![IMG-20251130-WA0037](https://github.com/user-attachments/assets/3fcc667c-aa61-4524-8539-91debec870ad)
+![ss2](https://github.com/user-attachments/assets/57920970-7a40-43aa-8521-74141279a83f)
 
-![IMG-20251130-WA0030](https://github.com/user-attachments/assets/c287ae7a-2fff-4d11-bde5-a6db0dcf7edc)
+
 
 
 
