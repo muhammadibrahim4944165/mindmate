@@ -14,7 +14,9 @@ Mindmate is a modern productivity and wellness app built with Flutter. It helps 
 
 ## Screenshots
 
-_Add screenshots here to showcase the app UI._
+![IMG-20251130-WA0030](https://github.com/user-attachments/assets/c287ae7a-2fff-4d11-bde5-a6db0dcf7edc)
+
+
 
 ## Getting Started
 
